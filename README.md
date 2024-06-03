@@ -54,3 +54,8 @@ KRSAPP_DB_NAME | Database name will be used. | 'krsapp_local'
 KRSAPP_DB_HOST | Database host. | 'localhost'
 KRSAPP_DB_PORT | Database running port. | 3306
 KRSAPP_DB_DIALECT | Database dialect. For this project, database dialect must be mysql. | 'mysql'
+
+### Testing the API using Postman Collection
+To test the API(s), you can use Postman. The collection file is in `postman` folder.
+
+Please follow [this](https://learning.postman.com/docs/designing-and-developing-your-api/importing-an-api/) instruction to import the collection and test the API.
