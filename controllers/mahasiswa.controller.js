@@ -131,18 +131,30 @@ const storeRencanaStudiMahasiswa = async (req, res) => {
       }
 
       const { mataKuliahIds } = data;
+      const isDuplicate = await isMataKuliahDuplicate(mataKuliahIds);
+
+      if (isDuplicate) {
+        throw new Error('Mata kuliah choosed is duplicate.');
+      }
+
       const result = await RencanaStudi.sequelize.transaction(async (t) => {
         return Promise.all(
           await mataKuliahIds.map(async (item) => {
             const mataKuliah = await MataKuliah.findByPk(item, { transaction: t });
+            const rencanaStudiMataKuliah = await getRencanaStudiMataKuliah(item);
 
             if (!mataKuliah) {
               throw new Error();
             }
 
+            if (rencanaStudiMataKuliah.length >= 4) {
+              throw new Error(`Quota for the mata kuliah ${mataKuliah.nama} is run out.`)
+            }
+
             const rencanaStudi = await RencanaStudi.create({
               mahasiswaId: parseInt(mahasiswaId),
               mataKuliahId: item,
+              transaction: t,
             });
 
             return rencanaStudi;
@@ -157,9 +169,9 @@ const storeRencanaStudiMahasiswa = async (req, res) => {
       });
     }
   } catch (e) {
-    res.status(httpStatus.NOT_FOUND).send({
-      status: httpStatus.NOT_FOUND,
-      message: 'Mahasiswa or mata kuliah not found. Rencana studi failed to be created.'
+    res.status(e.message ? httpStatus.BAD_REQUEST : httpStatus.NOT_FOUND).send({
+      status: e.message ? httpStatus.BAD_REQUEST : httpStatus.NOT_FOUND,
+      message: e.message || 'Mahasiswa or mata kuliah not found. Rencana studi failed to be created.',
     })
   }
 };
@@ -204,18 +216,30 @@ const updateRencanaStudiMahasiswa = async (req, res) => {
       }
 
       const { mataKuliahIds } = data;
+      const isDuplicate = await isMataKuliahDuplicate(mataKuliahIds);
+
+      if (isDuplicate) {
+        throw new Error('Mata kuliah choosed is duplicate.');
+      }
+
       const result = await RencanaStudi.sequelize.transaction(async (t) => {
         return Promise.all(
           await mataKuliahIds.map(async (item) => {
             const mataKuliah = await MataKuliah.findByPk(item, { transaction: t });
+            const rencanaStudiMataKuliah = await getRencanaStudiMataKuliah(item);
 
             if (!mataKuliah) {
               throw new Error();
             }
 
+            if (rencanaStudiMataKuliah.length > 4) {
+              throw new Error(`Quota for the mata kuliah ${mataKuliah.nama} is run out.`)
+            }
+
             let rencanaStudi = await RencanaStudi.create({
               mahasiswaId: parseInt(mahasiswaId),
               mataKuliahId: item,
+              transaction: t,
             });
 
             return rencanaStudi;
@@ -230,13 +254,20 @@ const updateRencanaStudiMahasiswa = async (req, res) => {
       });
     }
   } catch (e) {
-    console.log(e);
-    res.status(httpStatus.NOT_FOUND).send({
-      status: httpStatus.NOT_FOUND,
-      message: 'Mahasiswa or mata kuliah not found. Rencana studi failed to be updated.'
-    })
+    res.status(e.message ? httpStatus.BAD_REQUEST : httpStatus.NOT_FOUND).send({
+      status: e.message ? httpStatus.BAD_REQUEST : httpStatus.NOT_FOUND,
+      message: e.message || 'Mahasiswa or mata kuliah not found. Rencana studi failed to be created.',
+    });
   }
 };
+
+const getRencanaStudiMataKuliah = async (id) => {
+  return await RencanaStudi.findAll({ where: { mataKuliahId: id } });
+};
+
+const isMataKuliahDuplicate = async (mataKuliahs) => {
+  return new Set(mataKuliahs).size !== mataKuliahs.length;
+}
 
 const deleteAllRencanaStudiMahasiswa = async (id) => {
   try {
@@ -244,9 +275,38 @@ const deleteAllRencanaStudiMahasiswa = async (id) => {
 
     return true;
   } catch (e) {
-    console.log('insidee')
-    console.log(e);
     return false;
+  }
+};
+
+const deleteRencanaStudiMahasiswa = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const mahasiswa = await Mahasiswa.findByPk(id);
+
+    if (!mahasiswa) {
+      throw new Error();
+    }
+
+    const rencanaStudis = await RencanaStudi.findAll({ where: { mahasiswaId: id } });
+
+    console.log(rencanaStudis);
+    if (rencanaStudis.length <= 0) {
+      throw new Error('Mahasiswa has not created rencana studi.');
+    }
+
+    await deleteAllRencanaStudiMahasiswa(id);
+
+    res.status(httpStatus.NO_CONTENT).send({
+      status: httpStatus.NO_CONTENT,
+      message: 'Mahasiswa successfully deleted.'
+    });
+  } catch (e) {
+    console.log(e);
+    res.status(e.message ? httpStatus.BAD_REQUEST : httpStatus.NOT_FOUND).send({
+      status: e.message ? httpStatus.BAD_REQUEST : httpStatus.NOT_FOUND,
+      message: e.message || 'Mahasiswa or mata kuliah not found. Rencana studi failed to be deleted.',
+    });
   }
 }
 
@@ -259,4 +319,5 @@ module.exports = {
   storeRencanaStudiMahasiswa,
   findRencanaStudiMahasiswa,
   updateRencanaStudiMahasiswa,
+  deleteRencanaStudiMahasiswa,
 };

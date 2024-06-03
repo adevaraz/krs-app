@@ -38,8 +38,13 @@ router.post('/:id/rencana-studis', mahasiswaController.storeRencanaStudiMahasisw
 router.get('/:id/rencana-studis', mahasiswaController.findRencanaStudiMahasiswa);
 
 /**
- * [PUT] Find all rencana studi mahasiswa data
+ * [PUT] Update rencana studi mahasiswa data
  */
 router.put('/:id/rencana-studis', mahasiswaController.updateRencanaStudiMahasiswa);
+
+/**
+ * [DELETE] Delete all rencana studi mahasiswa data
+ */
+router.delete('/:id/rencana-studis', mahasiswaController.deleteRencanaStudiMahasiswa);
 
 module.exports = router;
